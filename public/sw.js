@@ -1,5 +1,5 @@
 // Offline shell: the app opens with no signal; the list syncs when it's back.
-const CACHE = 'fist-v3';
+const CACHE = 'fist-v4';
 const SHELL = ['/', '/index.html', '/catalog.js', '/manifest.json', '/icon.svg', '/icon-192.png', '/fist.svg'];
 
 self.addEventListener('install', (e) => {
