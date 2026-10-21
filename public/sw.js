@@ -1,6 +1,6 @@
 // Offline shell: the app opens with no signal; the list syncs when it's back.
-const CACHE = 'trolley-v1';
-const SHELL = ['/', '/index.html', '/catalog.js', '/manifest.json', '/icon.svg', '/icon-192.png'];
+const CACHE = 'fist-v2';
+const SHELL = ['/', '/index.html', '/catalog.js', '/manifest.json', '/icon.svg', '/icon-192.png', '/fist.svg'];
 
 self.addEventListener('install', (e) => {
   e.waitUntil(caches.open(CACHE).then((c) => c.addAll(SHELL)).then(() => self.skipWaiting()));

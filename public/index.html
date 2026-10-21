@@ -3,12 +3,15 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Trolley</title>
+<title>Shopping Fist</title>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Anton&display=swap" rel="stylesheet">
 <meta name="theme-color" content="#1f3d2b">
 <link rel="manifest" href="/manifest.json">
 <link rel="icon" href="/icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="/icon-192.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Shopping Fist">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <style>
 :root {
@@ -40,7 +43,7 @@ header {
   padding: calc(10px + env(safe-area-inset-top)) 16px 12px;
   display: flex; align-items: center; gap: 10px;
 }
-header h1 { font-size: 22px; margin: 0; letter-spacing: -.02em; font-weight: 800; }
+header h1 { font: 22px/1 Anton, Impact, 'Arial Narrow', sans-serif; margin: 0; letter-spacing: .03em; text-transform: uppercase; }
 header .count { opacity: .75; font-size: 14px; margin-left: 2px; }
 header .spacer { flex: 1; }
 .sync-dot { width: 9px; height: 9px; border-radius: 50%; background: var(--ok); opacity: .9; transition: background .3s; }
@@ -50,6 +53,22 @@ header .spacer { flex: 1; }
 header .icon-btn:active { background: rgba(255,255,255,.12); }
 
 main { max-width: 640px; margin: 0 auto; padding: 12px 16px 24px; }
+
+/* Banner */
+.banner {
+  position: relative; overflow: hidden; display: flex; align-items: center; gap: 12px;
+  background: var(--accent); color: #fff7ef; border-radius: var(--radius); box-shadow: var(--shadow);
+  padding: 10px 16px 10px 8px; margin-bottom: 14px; min-height: 92px;
+}
+.banner::before {
+  content: ""; position: absolute; inset: -50%;
+  background: repeating-conic-gradient(from 0deg at 18% 60%, rgba(255,255,255,.09) 0 8deg, transparent 8deg 22deg);
+}
+.banner img { position: relative; width: 66px; height: 92px; flex: none; transform: rotate(-8deg); filter: drop-shadow(0 3px 0 rgba(0,0,0,.18)); }
+.banner .words { position: relative; min-width: 0; }
+.banner strong { display: block; font: 34px/0.95 Anton, Impact, 'Arial Narrow', sans-serif; letter-spacing: .02em; text-transform: uppercase; text-shadow: 0 3px 0 rgba(0,0,0,.18); }
+.banner span { display: block; font-size: 15px; font-weight: 700; opacity: .92; margin-top: 3px; }
+@media (prefers-color-scheme: dark) { .banner { color: #1a0f0a; } .banner strong { text-shadow: none; } }
 
 /* Suggestions */
 .suggest { margin: 4px 0 14px; }
@@ -163,13 +182,14 @@ main { max-width: 640px; margin: 0 auto; padding: 12px 16px 24px; }
 </head>
 <body>
 <header>
-  <h1>Trolley</h1><span class="count" id="count"></span>
+  <h1>Shopping Fist</h1><span class="count" id="count"></span>
   <span class="spacer"></span>
   <span class="sync-dot" id="syncDot" title="Sync status"></span>
   <button class="icon-btn" id="settingsBtn" aria-label="Settings">⚙️</button>
 </header>
 
 <main>
+  <div class="banner"><img src="/fist.svg" alt=""><div class="words"><strong>Shopping Fist</strong><span id="tagline">Seize the groceries.</span></div></div>
   <div id="suggest" class="suggest"></div>
   <div id="list"></div>
 </main>
@@ -219,7 +239,7 @@ main { max-width: 640px; margin: 0 auto; padding: 12px 16px 24px; }
 
 <div class="sheet" id="welcomeSheet" role="dialog" aria-modal="true">
   <div class="grab"></div>
-  <h2>G'day 👋</h2>
+  <h2>G'day ✊</h2>
   <p class="hint" style="margin-top:0">Two things and you're in.</p>
   <label class="field"><span>Your name</span><input id="wName" placeholder="So we know who wanted the Tim Tams"></label>
   <label class="field"><span>Family code</span><input id="wCode" placeholder="Ask whoever set this up"></label>
@@ -610,6 +630,10 @@ main { max-width: 640px; margin: 0 auto; padding: 12px 16px 24px; }
   }
 
   // ---------- Go ----------
+  const TAGLINES = ['Seize the groceries.', 'A firm grip on the essentials.', 'Grab life by the broccoli.',
+    'Clench. Shop. Repeat.', 'Iron fist, soft cheeses.', 'Power to the pantry.', 'Hold the line. Also the kale.'];
+  $('tagline').textContent = TAGLINES[Math.floor(Math.random() * TAGLINES.length)];
+
   render();
   if (!me || !code) askWelcome(false);
   else { refresh(); pullKeep(); }
