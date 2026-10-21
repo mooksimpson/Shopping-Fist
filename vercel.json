@@ -1,0 +1,11 @@
+{
+  "framework": null,
+  "outputDirectory": "public",
+  "functions": {
+    "api/keep_sync.py": { "maxDuration": 30 },
+    "api/list.js": { "maxDuration": 15, "includeFiles": "public/catalog.js" }
+  },
+  "headers": [
+    { "source": "/sw.js", "headers": [{ "key": "Cache-Control", "value": "no-cache" }] }
+  ]
+}
