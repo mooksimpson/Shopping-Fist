@@ -337,6 +337,49 @@ body.dragging, body.dragging * { cursor: grabbing !important; }
 .section.drop { outline: 4px dashed var(--accent); outline-offset: 4px; }
 .section.drop .section-head { background: var(--accent); }
 
+/* Shop bar */
+.shopbar {
+  display: flex; align-items: center; gap: 8px; width: 100%; margin: 4px 0 12px; padding: 10px 14px;
+  background: #f4f1ea; color: #111; border: 3px solid #111; box-shadow: 4px 4px 0 #111;
+  font: 18px/1 var(--shout); letter-spacing: .05em; text-transform: uppercase; text-align: left; transform: rotate(.4deg);
+}
+.shopbar.here { background: #f2e600; }
+.shopbar .where { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.shopbar small { font: 12px/1 var(--type); text-transform: none; letter-spacing: 0; opacity: .75; }
+.shoplist { display: flex; flex-direction: column; gap: 8px; margin: 6px 0 18px; }
+.shoprow { display: flex; gap: 8px; }
+.shoprow > button:first-child {
+  flex: 1; text-align: left; padding: 13px 12px; border: 2px solid #111; background: #fff; color: #111;
+  font: 17px/1.1 var(--shout); letter-spacing: .04em; text-transform: uppercase; display: flex; justify-content: space-between; gap: 8px;
+}
+.shoprow > button.on { background: #111; color: #f2e600; }
+.shoprow small { font: 13px/1.1 var(--type); text-transform: none; letter-spacing: 0; opacity: .8; }
+.shoprow .del { width: 48px; border: 2px solid #111; background: var(--accent); color: #fff; font-size: 18px; }
+
+/* Bonus item */
+.bonus-tag {
+  flex: none; background: var(--accent); color: #fff; font: 12px/1 var(--shout); letter-spacing: .06em;
+  padding: 4px 6px 3px; transform: rotate(-4deg); animation: throb 1.2s ease-in-out infinite;
+}
+@keyframes throb { 50% { transform: rotate(-4deg) scale(1.12); } }
+.item.bonus .box { border-color: var(--accent); box-shadow: 0 0 0 3px #f2e600; }
+.skullrain { position: fixed; inset: 0; pointer-events: none; z-index: 60; overflow: hidden; }
+.skullrain i { position: absolute; top: -90px; font-style: normal; animation: fall linear forwards; will-change: transform; }
+@keyframes fall { to { transform: translateY(calc(100vh + 140px)) rotate(var(--rot)); } }
+.skullrain .flash {
+  position: absolute; top: 36%; left: 50%; font-size: 52px; transform: translate(-50%, -50%) rotate(-7deg);
+  animation: pop 2.2s ease-out forwards; white-space: nowrap; flex-wrap: nowrap;
+}
+@keyframes pop {
+  0% { opacity: 0; transform: translate(-50%, -50%) rotate(-7deg) scale(.2); }
+  18% { opacity: 1; transform: translate(-50%, -50%) rotate(-7deg) scale(1.15); }
+  28% { transform: translate(-50%, -50%) rotate(-7deg) scale(1); }
+  80% { opacity: 1; }
+  100% { opacity: 0; transform: translate(-50%, -50%) rotate(-7deg) scale(1.05); }
+}
+body.shake main { animation: shake .5s; }
+@keyframes shake { 15% { transform: translate(-7px, 3px) rotate(-1deg); } 35% { transform: translate(6px, -4px) rotate(1deg); } 55% { transform: translate(-5px, 2px); } 75% { transform: translate(4px, -2px); } }
+
 /* Toast */
 .toast { border-radius: 0; background: #111; color: #f4f1ea; border: 3px solid var(--accent); font-family: var(--type); box-shadow: 4px 4px 0 var(--accent); }
 .toast button { color: #f2e600; font-family: var(--shout); letter-spacing: .05em; font-weight: 400; text-transform: uppercase; }
@@ -351,6 +394,7 @@ body.dragging, body.dragging * { cursor: grabbing !important; }
 </header>
 
 <main>
+  <button class="shopbar" id="shopBar"><span>📍</span><span class="where" id="shopName">Not in a shop</span><small id="shopDist"></small><span>▾</span></button>
   <div class="banner"><i class="tape t1"></i><i class="tape t2"></i><img src="/fist.svg" alt=""><div class="words"><strong class="ransom" data-ransom="Shopping Fist">Shopping Fist</strong><span id="tagline">Seize the groceries.</span></div></div>
   <div id="suggest" class="suggest"></div>
   <div id="list"></div>
@@ -392,11 +436,20 @@ body.dragging, body.dragging * { cursor: grabbing !important; }
   </div>
   <div class="status" id="keepStatus"></div>
   <div class="order">
-    <h2 style="font-size:17px;margin-bottom:4px">Aisle order</h2>
+    <h2 style="font-size:17px;margin-bottom:4px" id="orderTitle">Aisle order</h2>
     <p class="hint">Match the walk through your supermarket.</p>
     <ul id="orderList"></ul>
   </div>
   <div class="row" style="margin-top:16px"><button class="btn primary" id="sDone">Done</button></div>
+</div>
+
+<div class="sheet" id="shopSheet" role="dialog" aria-modal="true">
+  <div class="grab"></div>
+  <h2>Which shop?</h2>
+  <p class="hint" id="shopHint">The app checks where you are when you open it.</p>
+  <div class="shoplist" id="shopList"></div>
+  <label class="field"><span>Standing in a new shop? Pin it</span><input id="newShop" placeholder="e.g. ALDI Edgecliff" maxlength="40"></label>
+  <button class="btn primary" id="pinShop" style="width:100%">📍 Pin this shop here</button>
 </div>
 
 <div class="sheet" id="welcomeSheet" role="dialog" aria-modal="true">
@@ -434,6 +487,19 @@ body.dragging, body.dragging * { cursor: grabbing !important; }
   let me = LS.get('name', '');
   let code = LS.get('code', '');
   let state = LS.get('state', { items: {}, catalog: {}, order: SECTIONS.slice() });
+  state.shops = state.shops || {};
+  let curShop = null;                                 // id of the shop we're in, or null
+  let shopOverride = LS.get('shopOverride', null);    // { id | 'none', until } when picked by hand
+  let lastFix = null;                                 // last { lat, lng, acc }
+  const SHOP_RADIUS = 250;                            // metres
+  const celebrated = new Set();
+
+  const sectionOf = (i) => (curShop && state.catalog[i.key] && state.catalog[i.key].shops && state.catalog[i.key].shops[curShop]) || i.section;
+  const orderFor = () => {
+    const sh = curShop && state.shops[curShop];
+    return (sh && sh.order && sh.order.length ? sh.order : (state.order && state.order.length ? state.order : SECTIONS));
+  };
+  const shopName = (id) => (state.shops[id] ? state.shops[id].name : '');
   let queue = LS.get('queue', []);
   let editing = null;
   let freshIds = new Set();
@@ -459,7 +525,11 @@ body.dragging, body.dragging * { cursor: grabbing !important; }
   function takeServer(data) {
     if (queue.length) return; // local changes still on their way, keep our view
     const before = new Set(Object.keys(state.items));
-    state = { items: data.items || {}, catalog: data.catalog || {}, order: data.order || SECTIONS.slice() };
+    state = { items: data.items || {}, catalog: data.catalog || {}, order: data.order || SECTIONS.slice(),
+      shops: data.shops || {}, bonus: data.bonus || null };
+    if (curShop && !state.shops[curShop]) curShop = null;
+    if (!curShop && Object.keys(state.shops).length && !lastFix) detectShop();
+    renderShopBar();
     for (const id of Object.keys(state.items)) if (!before.has(id)) freshIds.add(id);
     LS.set('state', state);
     if (data.fromVoice && data.fromVoice.length) toast('🗣️ From Keep: ' + data.fromVoice.join(', '));
@@ -532,7 +602,14 @@ body.dragging, body.dragging * { cursor: grabbing !important; }
         break;
       }
       case 'update': if (it) {
-        Object.assign(it, op.fields);
+        const f = { ...op.fields };
+        if (op.shop && f.section) {
+          const c = state.catalog[it.key] || { name: it.name, section: it.section, count: 0, last: [] };
+          c.shops = { ...(c.shops || {}), [op.shop]: f.section }; state.catalog[it.key] = c;
+          delete f.section;
+        }
+        op = { ...op, fields: f };
+        Object.assign(it, f);
         if (op.fields.name) it.key = key(op.fields.name);
         if (op.fields.section) {
           const c = state.catalog[it.key] || { name: it.name, count: 0, last: [] };
@@ -550,7 +627,11 @@ body.dragging, body.dragging * { cursor: grabbing !important; }
         }
         break;
       }
-      case 'order': state.order = op.order; break;
+      case 'order':
+        if (op.shop && state.shops[op.shop]) state.shops[op.shop].order = op.order; else state.order = op.order;
+        break;
+      case 'shop_add': state.shops[op.shopId] = { id: op.shopId, name: op.name, lat: op.lat, lng: op.lng, order: (state.order || SECTIONS).slice() }; break;
+      case 'shop_del': delete state.shops[op.shopId]; break;
       case 'forget': delete state.catalog[op.key]; break;
     }
   }
@@ -640,10 +721,11 @@ body.dragging, body.dragging * { cursor: grabbing !important; }
   function itemRow(i) {
     const fresh = freshIds.has(i.id) ? ' fresh' : '';
     const by = i.by === 'Voice' ? '🗣️' : initial(i.by);
-    return `<div class="item${i.checked ? ' checked' : ''}${fresh}" data-id="${i.id}">
+    const bonus = i.id === state.bonus && !i.checked;
+    return `<div class="item${i.checked ? ' checked' : ''}${fresh}${bonus ? ' bonus' : ''}" data-id="${i.id}">
       <button class="check" data-act="check" aria-label="Tick ${esc(i.name)}"><span class="box"></span></button>
       <button class="body" data-act="menu">
-        <span class="name"><span>${esc(i.name)}</span>${i.qty ? `<span class="qty">${esc(i.qty)}</span>` : ''}</span>
+        <span class="name"><span>${esc(i.name)}</span>${i.qty ? `<span class="qty">${esc(i.qty)}</span>` : ''}${bonus ? '<span class="bonus-tag">💀 Bonus</span>' : ''}</span>
         ${i.note ? `<span class="note">${esc(i.note)}</span>` : ''}
       </button>
       ${by && by !== initial(me) ? `<span class="by" title="Added by ${esc(i.by)}">${esc(by)}</span>` : ''}
@@ -683,9 +765,9 @@ body.dragging, body.dragging * { cursor: grabbing !important; }
     $('count').textContent = todo.length ? `${todo.length} to get` : '';
     $('suggest').innerHTML = suggestionsHtml();
 
-    const order = (state.order && state.order.length ? state.order : SECTIONS);
+    const order = orderFor();
     const bySec = {};
-    for (const i of todo) (bySec[i.section] = bySec[i.section] || []).push(i);
+    for (const i of todo) { const sec = sectionOf(i); (bySec[sec] = bySec[sec] || []).push(i); }
     let h = '';
     for (const sec of [...order, ...Object.keys(bySec).filter((s) => !order.includes(s))]) {
       const list = bySec[sec]; if (!list) continue;
@@ -750,7 +832,7 @@ body.dragging, body.dragging * { cursor: grabbing !important; }
     const sec = under && under.closest('.section[data-sec]');
     if (drag.target && drag.target !== sec) drag.target.classList.remove('drop');
     drag.target = sec || null;
-    if (sec && sec.dataset.sec !== drag.it.section) sec.classList.add('drop');
+    if (sec && sec.dataset.sec !== sectionOf(drag.it)) sec.classList.add('drop');
   }
   function dropDrag() {
     if (!drag) return;
@@ -759,12 +841,8 @@ body.dragging, body.dragging * { cursor: grabbing !important; }
     if (target) target.classList.remove('drop');
     drag = null;
     suppressClick = true; setTimeout(() => (suppressClick = false), 500);
-    if (target && target.dataset.sec !== it.section) {
-      send({ op: 'update', id: it.id, fields: { section: target.dataset.sec } });
-      toast(`${it.name} lives in ${target.dataset.sec} now`);
-    } else if (!moved) {
-      openQuick(it);
-    }
+    if (target && target.dataset.sec !== sectionOf(it)) moveTo(it, target.dataset.sec);
+    else if (!moved) openQuick(it);
     if (renderLater) { renderLater = false; render(); }
   }
 
@@ -794,16 +872,13 @@ body.dragging, body.dragging * { cursor: grabbing !important; }
     $('qName').textContent = it.name;
     $('qQty').hidden = !it.qty; $('qQty').textContent = it.qty || '';
     $('qAisles').innerHTML = SECTIONS.map((s) =>
-      `<button data-aisle="${esc(s)}" class="${s === it.section ? 'on' : ''}">${EMOJI[s] || ''} ${esc(s)}</button>`).join('');
+      `<button data-aisle="${esc(s)}" class="${s === sectionOf(it) ? 'on' : ''}">${EMOJI[s] || ''} ${esc(s)}</button>`).join('');
     openSheet('quickSheet');
   }
   $('qAisles').addEventListener('click', (e) => {
     const b = e.target.closest('[data-aisle]'); const it = state.items[editing];
     if (!b || !it) return closeSheets();
-    if (b.dataset.aisle !== it.section) {
-      send({ op: 'update', id: it.id, fields: { section: b.dataset.aisle } });
-      toast(`${it.name} lives in ${b.dataset.aisle} now`);
-    }
+    if (b.dataset.aisle !== sectionOf(it)) moveTo(it, b.dataset.aisle);
     closeSheets();
   });
   $('qDelete').addEventListener('click', () => removeItem(state.items[editing]));
@@ -811,6 +886,12 @@ body.dragging, body.dragging * { cursor: grabbing !important; }
     const it = state.items[editing]; closeSheets();
     if (it) setTimeout(() => openEdit(it), 180);
   });
+
+  // Moving an item: in a shop it's remembered for that shop (for everyone); otherwise it's the default aisle
+  function moveTo(it, section) {
+    send({ op: 'update', id: it.id, fields: { section }, shop: curShop || undefined });
+    toast(curShop ? `${it.name} lives in ${section} at ${shopName(curShop)}` : `${it.name} lives in ${section} now`);
+  }
 
   function removeItem(it) {
     if (!it) return closeSheets();
@@ -829,7 +910,9 @@ body.dragging, body.dragging * { cursor: grabbing !important; }
     const row = btn.closest('.item'); const it = state.items[row.dataset.id]; if (!it) return;
     if (btn.dataset.act === 'check') {
       if (navigator.vibrate) navigator.vibrate(8);
+      const bonusHit = !it.checked && it.id === state.bonus && !celebrated.has(it.id);
       send({ op: 'check', id: it.id, checked: !it.checked });
+      if (bonusHit) { celebrated.add(it.id); celebrate(); }
     } else if (!it.checked) openQuick(it);
   });
   $('list').addEventListener('click', (e) => {
@@ -846,7 +929,7 @@ body.dragging, body.dragging * { cursor: grabbing !important; }
   $('eSection').innerHTML = SECTIONS.map((s) => `<option>${esc(s)}</option>`).join('');
   function openEdit(it) {
     editing = it.id;
-    $('eName').value = it.name; $('eQty').value = it.qty || ''; $('eNote').value = it.note || ''; $('eSection').value = it.section;
+    $('eName').value = it.name; $('eQty').value = it.qty || ''; $('eNote').value = it.note || ''; $('eSection').value = sectionOf(it);
     openSheet('editSheet');
   }
   $('eSave').addEventListener('click', () => {
@@ -856,25 +939,27 @@ body.dragging, body.dragging * { cursor: grabbing !important; }
     if (name && name !== it.name) fields.name = name;
     if ($('eQty').value.trim() !== (it.qty || '')) fields.qty = $('eQty').value.trim();
     if ($('eNote').value.trim() !== (it.note || '')) fields.note = $('eNote').value.trim();
-    if ($('eSection').value !== it.section) fields.section = $('eSection').value;
+    const newSec = $('eSection').value !== sectionOf(it) ? $('eSection').value : null;
     if (Object.keys(fields).length) send({ op: 'update', id: it.id, fields });
+    if (newSec) moveTo(it, newSec);
     closeSheets();
   });
   $('eDelete').addEventListener('click', () => removeItem(state.items[editing]));
 
   // Settings
   function renderOrder() {
-    const order = state.order && state.order.length ? state.order : SECTIONS.slice();
+    const order = orderFor().slice();
+    $('orderTitle').textContent = curShop ? `Aisle order at ${shopName(curShop)}` : 'Aisle order';
     $('orderList').innerHTML = order.map((s, i) => `<li><span class="lbl">${EMOJI[s] || ''} ${esc(s)}</span>
       <button data-mv="-1" data-i="${i}" ${i === 0 ? 'disabled' : ''} aria-label="Move up">↑</button>
       <button data-mv="1" data-i="${i}" ${i === order.length - 1 ? 'disabled' : ''} aria-label="Move down">↓</button></li>`).join('');
   }
   $('orderList').addEventListener('click', (e) => {
     const b = e.target.closest('[data-mv]'); if (!b) return;
-    const order = (state.order && state.order.length ? state.order : SECTIONS).slice();
+    const order = orderFor().slice();
     const i = +b.dataset.i, j = i + +b.dataset.mv;
     [order[i], order[j]] = [order[j], order[i]];
-    send({ op: 'order', order }); renderOrder();
+    send({ op: 'order', order, shop: curShop || undefined }); renderOrder();
   });
   $('settingsBtn').addEventListener('click', () => {
     $('sName').value = me; $('sCode').value = code; $('keepStatus').textContent = '';
@@ -913,8 +998,166 @@ body.dragging, body.dragging * { cursor: grabbing !important; }
     clearTimeout(toastTimer); toastTimer = setTimeout(() => $('toast').classList.remove('show'), undo ? 5000 : 3500);
   }
 
+  // ---------- Shops ----------
+  function metres(a, b) {
+    const R = 6371000, toR = Math.PI / 180;
+    const dLat = (b.lat - a.lat) * toR, dLng = (b.lng - a.lng) * toR;
+    const h = Math.sin(dLat / 2) ** 2 + Math.cos(a.lat * toR) * Math.cos(b.lat * toR) * Math.sin(dLng / 2) ** 2;
+    return 2 * R * Math.asin(Math.sqrt(h));
+  }
+  const fmtDist = (m) => (m < 1000 ? `${Math.round(m / 10) * 10} m` : `${(m / 1000).toFixed(1)} km`);
+
+  function getFix() {
+    return new Promise((ok, fail) => {
+      if (!navigator.geolocation) return fail(new Error('no geolocation'));
+      navigator.geolocation.getCurrentPosition(
+        (p) => ok({ lat: p.coords.latitude, lng: p.coords.longitude, acc: p.coords.accuracy }),
+        fail, { enableHighAccuracy: true, timeout: 12000, maximumAge: 30000 });
+    });
+  }
+
+  function overrideActive() { return shopOverride && shopOverride.until > Date.now(); }
+
+  function setShop(id) {
+    const before = curShop;
+    curShop = id && state.shops[id] ? id : null;
+    renderShopBar();
+    if (before !== curShop) render();
+  }
+
+  let detecting = false;
+  async function detectShop() {
+    if (detecting) return;
+    if (overrideActive()) { setShop(shopOverride.id === 'none' ? null : shopOverride.id); return; }
+    if (!Object.keys(state.shops).length) { setShop(null); return; }
+    detecting = true;
+    try {
+      lastFix = await getFix();
+      let best = null, bestD = Infinity;
+      for (const sh of Object.values(state.shops)) {
+        const d = metres(lastFix, sh);
+        if (d < bestD) { best = sh; bestD = d; }
+      }
+      setShop(best && bestD <= SHOP_RADIUS + Math.min(lastFix.acc || 0, 150) ? best.id : null);
+    } catch { /* no permission or no fix: leave as is */ }
+    detecting = false;
+  }
+
+  function renderShopBar() {
+    const sh = curShop && state.shops[curShop];
+    $('shopBar').classList.toggle('here', !!sh);
+    $('shopName').textContent = sh ? sh.name : (Object.keys(state.shops).length ? 'Not in a shop' : 'Pin your shops');
+    $('shopDist').textContent = sh && lastFix && !overrideActive() ? fmtDist(metres(lastFix, sh)) : (overrideActive() && sh ? 'picked' : '');
+  }
+
+  function renderShopList() {
+    const shops = Object.values(state.shops).map((sh) => ({ ...sh, d: lastFix ? metres(lastFix, sh) : null }))
+      .sort((a, b) => (a.d ?? 1e12) - (b.d ?? 1e12) || a.name.localeCompare(b.name));
+    const auto = !overrideActive();
+    $('shopList').innerHTML =
+      `<div class="shoprow"><button data-shop="auto" class="${auto ? 'on' : ''}">📡 Work it out from location</button></div>` +
+      `<div class="shoprow"><button data-shop="none" class="${!auto && shopOverride.id === 'none' ? 'on' : ''}">🏠 Not in a shop</button></div>` +
+      shops.map((sh) => `<div class="shoprow"><button data-shop="${esc(sh.id)}" class="${sh.id === curShop ? 'on' : ''}">${esc(sh.name)}<small>${sh.d != null ? fmtDist(sh.d) : ''}</small></button><button class="del" data-delshop="${esc(sh.id)}" aria-label="Forget ${esc(sh.name)}">✕</button></div>`).join('');
+  }
+
+  $('shopBar').addEventListener('click', () => {
+    renderShopList(); $('newShop').value = '';
+    $('shopHint').textContent = lastFix ? `Location accurate to about ${fmtDist(lastFix.acc || 0)}.` : 'The app checks where you are when you open it.';
+    openSheet('shopSheet');
+    detectShop().then(renderShopList);
+  });
+  $('shopList').addEventListener('click', (e) => {
+    const del = e.target.closest('[data-delshop]');
+    if (del) {
+      const sh = state.shops[del.dataset.delshop];
+      if (sh && confirm(`Forget ${sh.name}? Its aisle layout goes too.`)) {
+        send({ op: 'shop_del', shopId: sh.id });
+        if (curShop === sh.id) setShop(null);
+        renderShopList();
+      }
+      return;
+    }
+    const b = e.target.closest('[data-shop]'); if (!b) return;
+    if (b.dataset.shop === 'auto') { shopOverride = null; LS.set('shopOverride', null); closeSheets(); detectShop(); return; }
+    shopOverride = { id: b.dataset.shop, until: Date.now() + 3 * 3600e3 }; LS.set('shopOverride', shopOverride);
+    setShop(b.dataset.shop === 'none' ? null : b.dataset.shop);
+    closeSheets();
+  });
+  $('pinShop').addEventListener('click', async () => {
+    const name = $('newShop').value.trim();
+    if (!name) { $('newShop').focus(); $('newShop').placeholder = 'Give it a name first'; return; }
+    $('pinShop').textContent = 'Finding you…';
+    try {
+      lastFix = await getFix();
+      const shopId = uid();
+      send({ op: 'shop_add', shopId, name, lat: lastFix.lat, lng: lastFix.lng });
+      shopOverride = null; LS.set('shopOverride', null);
+      setShop(shopId); closeSheets();
+      toast(`📍 Pinned ${name}. Drag things where they live here.`);
+    } catch {
+      toast("Couldn't get your location. Allow location for this site and try again.");
+    }
+    $('pinShop').textContent = '📍 Pin this shop here';
+  });
+
+  // ---------- Bonus: skull rain + one second of riff ----------
+  let audio = null;
+  function riff() {
+    try {
+      audio = audio || new (window.AudioContext || window.webkitAudioContext)();
+      if (audio.state === 'suspended') audio.resume();
+      const t0 = audio.currentTime + 0.02;
+      const master = audio.createGain(); master.gain.value = 0.32; master.connect(audio.destination);
+      const drive = audio.createWaveShaper();
+      const k = 320, n = 2048, curve = new Float32Array(n);
+      for (let i = 0; i < n; i++) { const x = i * 2 / n - 1; curve[i] = ((3 + k) * x * 20 * Math.PI / 180) / (Math.PI + k * Math.abs(x)); }
+      drive.curve = curve; drive.oversample = '4x';
+      const tone = audio.createBiquadFilter(); tone.type = 'lowpass'; tone.frequency.value = 3200;
+      drive.connect(tone); tone.connect(master);
+      // E5 power chord: three palm-muted chugs, then let it ring
+      const hits = [[0, 0.09], [0.13, 0.09], [0.26, 0.09], [0.4, 0.62]];
+      for (const [at, len] of hits) {
+        const g = audio.createGain(); g.connect(drive);
+        g.gain.setValueAtTime(0.0001, t0 + at);
+        g.gain.exponentialRampToValueAtTime(0.9, t0 + at + 0.01);
+        g.gain.exponentialRampToValueAtTime(len > 0.2 ? 0.35 : 0.05, t0 + at + len);
+        g.gain.exponentialRampToValueAtTime(0.0001, t0 + at + len + 0.05);
+        for (const [f, det] of [[82.41, -6], [82.41, 7], [123.47, 0], [164.81, 4]]) {
+          const o = audio.createOscillator(); o.type = 'sawtooth'; o.frequency.value = f; o.detune.value = det;
+          if (len > 0.2) o.frequency.setValueAtTime(f, t0 + at + 0.3), o.frequency.linearRampToValueAtTime(f * 1.06, t0 + at + len);
+          o.connect(g); o.start(t0 + at); o.stop(t0 + at + len + 0.08);
+        }
+      }
+      // crash cymbal on the big hit
+      const len = audio.sampleRate * 0.7, buf = audio.createBuffer(1, len, audio.sampleRate), d = buf.getChannelData(0);
+      for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, 2.5);
+      const src = audio.createBufferSource(); src.buffer = buf;
+      const hp = audio.createBiquadFilter(); hp.type = 'highpass'; hp.frequency.value = 5000;
+      const cg = audio.createGain(); cg.gain.value = 0.28;
+      src.connect(hp); hp.connect(cg); cg.connect(master); src.start(t0 + 0.4);
+    } catch { /* no sound, still skulls */ }
+  }
+
+  function celebrate() {
+    riff();
+    if (navigator.vibrate) navigator.vibrate([60, 40, 60, 40, 160]);
+    const calm = matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const layer = document.createElement('div'); layer.className = 'skullrain';
+    let h = '';
+    for (let i = 0; i < (calm ? 8 : 38); i++) {
+      const size = 22 + Math.random() * 38, dur = 1.3 + Math.random() * 1.4, delay = Math.random() * 0.7;
+      h += `<i style="left:${Math.random() * 96}%;font-size:${size}px;animation-duration:${dur}s;animation-delay:${delay}s;--rot:${Math.round(Math.random() * 720 - 360)}deg">💀</i>`;
+    }
+    h += '<div class="flash ransom" data-ransom="Bonus!"></div>';
+    layer.innerHTML = h;
+    document.body.appendChild(layer);
+    ransomify(layer.querySelector('.flash'));
+    document.body.classList.add('shake'); setTimeout(() => document.body.classList.remove('shake'), 520);
+    setTimeout(() => layer.remove(), 3400);
+  }
+
   // ---------- Ransom-note titles ----------
-  document.querySelectorAll('[data-ransom]').forEach((el) => {
+  function ransomify(el) {
     const pattern = [0, 1, 2, 3, 0, 4, 1, 3, 2, 0, 1, 4, 3];
     const tilt = [-4, 3, -2, 5, -3, 2, -5, 4, -1, 3, -4, 2, -2];
     let i = 0;
@@ -924,7 +1167,8 @@ body.dragging, body.dragging * { cursor: grabbing !important; }
       return `<b class="f${pattern[n % pattern.length]}" style="transform:rotate(${tilt[n % tilt.length]}deg)">${esc(ch)}</b>`;
     }).join('');
     el.setAttribute('aria-label', el.dataset.ransom);
-  });
+  }
+  document.querySelectorAll('[data-ransom]').forEach(ransomify);
 
   // ---------- Go ----------
   const TAGLINES = ['Seize the groceries.', 'A firm grip on the essentials.', 'Grab life by the broccoli.',
@@ -932,12 +1176,12 @@ body.dragging, body.dragging * { cursor: grabbing !important; }
     'No gods, no masters, no milk.', 'Anarchy in the produce aisle.', 'Never mind the bollocks, get the bok choy.', 'Smash the system. Not the eggs.', 'Kale is the new black.'];
   $('tagline').textContent = TAGLINES[Math.floor(Math.random() * TAGLINES.length)];
 
-  render();
+  render(); renderShopBar();
   if (!me || !code) askWelcome(false);
-  else { refresh(); pullKeep(); }
+  else { refresh(); pullKeep(); detectShop(); }
 
   setInterval(() => { if (document.visibilityState === 'visible' && !editing) refresh(); }, 5000);
-  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') { refresh(); pullKeep(); } });
+  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') { refresh(); pullKeep(); detectShop(); } });
   window.addEventListener('online', () => flush());
   window.addEventListener('offline', () => setDot('offline'));
 

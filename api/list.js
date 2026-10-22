@@ -25,15 +25,31 @@ function parseHash(arr) {
 }
 
 async function loadAll() {
-  const [items, catalog, meta] = await pipeline([
-    ['HGETALL', 'items'], ['HGETALL', 'catalog'], ['GET', 'meta'],
+  const [items, catalog, meta, shops, bonus] = await pipeline([
+    ['HGETALL', 'items'], ['HGETALL', 'catalog'], ['GET', 'meta'], ['HGETALL', 'shops'], ['GET', 'bonus'],
   ]);
   let m = {};
   try { m = JSON.parse(meta || '{}') || {}; } catch {}
   const order = Array.isArray(m.order) ? m.order : [];
   // Keep any new default sections in the order list
   for (const s of Catalog.SECTIONS) if (!order.includes(s)) order.push(s);
-  return { items: parseHash(items), catalog: parseHash(catalog), order };
+  return { items: parseHash(items), catalog: parseHash(catalog), order, shops: parseHash(shops), bonus: bonus || null };
+}
+
+function cleanOrder(order) {
+  const o = (Array.isArray(order) ? order : []).filter((s) => Catalog.SECTIONS.includes(s));
+  for (const s of Catalog.SECTIONS) if (!o.includes(s)) o.push(s);
+  return o;
+}
+
+// One bonus item per list: if the current one has gone, pick a fresh one.
+async function ensureBonus(state) {
+  if (state.bonus && state.items[state.bonus]) return;
+  const pool = Object.values(state.items).filter((i) => !i.checked);
+  const pick = pool.length ? pool[Math.floor(Math.random() * pool.length)].id : null;
+  if (pick === state.bonus) return;
+  state.bonus = pick;
+  await (pick ? cmd('SET', 'bonus', pick) : cmd('DEL', 'bonus'));
 }
 
 async function addItem(state, { id: wantId, name, qty = '', note = '', by = '', section }) {
@@ -108,7 +124,15 @@ async function applyOp(state, body) {
       if (typeof f.qty === 'string') item.qty = f.qty.slice(0, 20);
       if (typeof f.note === 'string') item.note = f.note.slice(0, 120);
       const cmds = [];
-      if (typeof f.section === 'string' && Catalog.SECTIONS.includes(f.section)) {
+      const shop = body.shop && state.shops[body.shop] ? body.shop : null;
+      if (shop && typeof f.section === 'string' && Catalog.SECTIONS.includes(f.section)) {
+        // Moved while in a shop: remember the aisle for this shop only, for everyone
+        const cat = state.catalog[item.key] || { name: item.name, section: item.section, count: 0, last: [] };
+        cat.shops = { ...(cat.shops || {}), [shop]: f.section };
+        cat.name = item.name;
+        state.catalog[item.key] = cat;
+        cmds.push(['HSET', 'catalog', item.key, JSON.stringify(cat)]);
+      } else if (typeof f.section === 'string' && Catalog.SECTIONS.includes(f.section)) {
         item.section = f.section;
         // Remember where this item lives next time
         const cat = state.catalog[item.key] || { name: item.name, section: f.section, count: 0, last: [] };
@@ -161,9 +185,31 @@ async function applyOp(state, body) {
     }
     case 'order': {
       if (!Array.isArray(body.order)) return;
-      const order = body.order.filter((s) => Catalog.SECTIONS.includes(s));
-      state.order = order;
-      await cmd('SET', 'meta', JSON.stringify({ order }));
+      const order = cleanOrder(body.order);
+      const shop = body.shop && state.shops[body.shop];
+      if (shop) {
+        shop.order = order;
+        await cmd('HSET', 'shops', shop.id, JSON.stringify(shop));
+      } else {
+        state.order = order;
+        await cmd('SET', 'meta', JSON.stringify({ order }));
+      }
+      return;
+    }
+    case 'shop_add': {
+      const lat = Number(body.lat), lng = Number(body.lng);
+      const name = String(body.name || '').trim().slice(0, 40);
+      if (!name || !isFinite(lat) || !isFinite(lng) || Math.abs(lat) > 90 || Math.abs(lng) > 180) return;
+      const sid = (typeof body.shopId === 'string' && /^[a-z0-9]{6,24}$/.test(body.shopId)) ? body.shopId : id();
+      const shop = { id: sid, name, lat, lng, order: cleanOrder(state.order) };
+      state.shops[sid] = shop;
+      await cmd('HSET', 'shops', sid, JSON.stringify(shop));
+      return;
+    }
+    case 'shop_del': {
+      if (!state.shops[body.shopId]) return;
+      delete state.shops[body.shopId];
+      await cmd('HDEL', 'shops', body.shopId);
       return;
     }
     case 'forget': {
@@ -192,6 +238,7 @@ module.exports = async (req, res) => {
     } else {
       return res.status(405).end();
     }
+    await ensureBonus(state);
     return res.status(200).json({ ...state, fromVoice: added, serverTime: Date.now() });
   } catch (e) {
     console.error(e);
