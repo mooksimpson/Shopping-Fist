@@ -18,7 +18,8 @@ import gkeepapi
 REDIS_URL = (os.environ.get("KV_REST_API_URL") or os.environ.get("UPSTASH_REDIS_REST_URL") or "").rstrip("/")
 REDIS_TOKEN = os.environ.get("KV_REST_API_TOKEN") or os.environ.get("UPSTASH_REDIS_REST_TOKEN") or ""
 EMAIL = os.environ.get("GOOGLE_EMAIL", "")
-MASTER_TOKEN = os.environ.get("GOOGLE_MASTER_TOKEN", "")
+MASTER_TOKEN = os.environ.get("GOOGLE_MASTER_TOKEN", "").strip()
+DEVICE_ID = os.environ.get("GOOGLE_DEVICE_ID", "").strip() or None  # the android_id the token was made with
 LIST_TITLE = os.environ.get("KEEP_LIST_TITLE", "shopping list").strip().lower()
 FAMILY_CODE = os.environ.get("FAMILY_CODE", "")
 MIN_GAP_SECONDS = 25          # don't hammer Google if three phones open at once
@@ -66,13 +67,13 @@ def sync(force=False):
 
     keep = gkeepapi.Keep()
     try:
-        keep.authenticate(EMAIL, MASTER_TOKEN, state=state)
+        keep.authenticate(EMAIL, MASTER_TOKEN, state=state, device_id=DEVICE_ID)
     except Exception:
         if state is None:
             raise
         # Stale cache: start fresh
         keep = gkeepapi.Keep()
-        keep.authenticate(EMAIL, MASTER_TOKEN)
+        keep.authenticate(EMAIL, MASTER_TOKEN, device_id=DEVICE_ID)
 
     lst = find_list(keep)
     if lst is None:
