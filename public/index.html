@@ -337,6 +337,48 @@ body.dragging, body.dragging * { cursor: grabbing !important; }
 .section.drop { outline: 4px dashed var(--accent); outline-offset: 4px; }
 .section.drop .section-head { background: var(--accent); }
 
+/* Tighter banner */
+.banner { min-height: 0; padding: 6px 12px 6px 4px; margin: 6px 4px 14px; gap: 8px; transform: rotate(-.6deg); }
+.banner img { width: 44px; height: 56px; transform: rotate(-10deg); }
+.banner strong.ransom { display: flex; font-size: 18px; transform: rotate(1deg); flex-wrap: nowrap; white-space: nowrap; }
+.banner .words { display: flex; flex-direction: column; align-items: flex-start; }
+.banner strong b { padding: .06em .09em; }
+.banner span#tagline { font-size: 12px; margin-top: 4px; padding: 2px 6px; }
+.tape { width: 52px; height: 15px; }
+.tape.t1 { top: -8px; left: 12px; }
+.tape.t2 { bottom: -7px; right: 16px; }
+
+/* Priority */
+.item.pri1 .name > span:first-child { background: linear-gradient(transparent 55%, #f2e600 55%); }
+.item.pri2 { background: #ffe0dc; box-shadow: inset 7px 0 0 var(--accent); }
+.pri-stamp {
+  flex: none; font: 15px/1 'Permanent Marker', cursive; color: var(--accent); transform: rotate(-8deg);
+  border: 2px solid var(--accent); padding: 3px 5px 1px; letter-spacing: .02em;
+}
+.pri-stamp.p1 { color: #111; border-color: #111; background: #f2e600; }
+.item.checked .pri-stamp { opacity: .35; }
+.item.checked.pri2 { background: transparent; box-shadow: none; }
+.mustget {
+  display: flex; gap: 8px; align-items: baseline; margin: -2px 0 14px; padding: 9px 12px;
+  background: var(--accent) var(--grit); color: #fff; border: 3px solid #111; box-shadow: 4px 4px 0 #111; transform: rotate(-.5deg);
+  font: 16px/1.25 var(--type);
+}
+.mustget b { font: 17px/1 var(--shout); letter-spacing: .05em; white-space: nowrap; font-weight: 400; }
+.prirow { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin: 8px 0 16px; }
+.prirow button { padding: 11px 6px; border: 2px solid #111; background: #fff; color: #111; font: 15px/1.1 var(--shout); letter-spacing: .04em; text-transform: uppercase; }
+.prirow button.on[data-pri="0"] { background: #111; color: #f4f1ea; }
+.prirow button.on[data-pri="1"] { background: #f2e600; }
+.prirow button.on[data-pri="2"] { background: var(--accent); color: #fff; }
+
+/* Draggable aisle order */
+.order li { touch-action: auto; background: transparent; }
+.order .handle { width: 46px; height: 40px; display: grid; place-items: center; font-size: 20px; touch-action: none; cursor: grab; border: 2px solid #111; background: #fff; }
+.order li.dragging { background: #f2e600; box-shadow: 4px 4px 0 #111; position: relative; z-index: 2; }
+.order select { width: 100%; height: 46px; border: 3px solid #111; background: #fff; color: #111; font-family: var(--type); margin-bottom: 10px; padding: 0 10px; }
+
+/* Invite */
+.codebox { font: 26px/1 var(--shout); letter-spacing: .06em; background: #fff; border: 3px dashed #111; padding: 14px; text-align: center; margin: 4px 0 12px; user-select: all; }
+
 /* Shop bar */
 .shopbar {
   display: flex; align-items: center; gap: 8px; width: 100%; margin: 4px 0 12px; padding: 10px 14px;
@@ -357,12 +399,6 @@ body.dragging, body.dragging * { cursor: grabbing !important; }
 .shoprow .del { width: 48px; border: 2px solid #111; background: var(--accent); color: #fff; font-size: 18px; }
 
 /* Bonus item */
-.bonus-tag {
-  flex: none; background: var(--accent); color: #fff; font: 12px/1 var(--shout); letter-spacing: .06em;
-  padding: 4px 6px 3px; transform: rotate(-4deg); animation: throb 1.2s ease-in-out infinite;
-}
-@keyframes throb { 50% { transform: rotate(-4deg) scale(1.12); } }
-.item.bonus .box { border-color: var(--accent); box-shadow: 0 0 0 3px #f2e600; }
 .skullrain { position: fixed; inset: 0; pointer-events: none; z-index: 60; overflow: hidden; }
 .skullrain i { position: absolute; top: -90px; font-style: normal; animation: fall linear forwards; will-change: transform; }
 @keyframes fall { to { transform: translateY(calc(100vh + 140px)) rotate(var(--rot)); } }
@@ -395,6 +431,7 @@ body.shake main { animation: shake .5s; }
 
 <main>
   <button class="shopbar" id="shopBar"><span>📍</span><span class="where" id="shopName">Not in a shop</span><small id="shopDist"></small><span>▾</span></button>
+  <div class="mustget" id="mustGet" hidden></div>
   <div class="banner"><i class="tape t1"></i><i class="tape t2"></i><img src="/fist.svg" alt=""><div class="words"><strong class="ransom" data-ransom="Shopping Fist">Shopping Fist</strong><span id="tagline">Seize the groceries.</span></div></div>
   <div id="suggest" class="suggest"></div>
   <div id="list"></div>
@@ -420,6 +457,7 @@ body.shake main { animation: shake .5s; }
     <label class="field"><span>Aisle</span><select id="eSection"></select></label>
   </div>
   <label class="field"><span>Note</span><input id="eNote" placeholder="The good bread, not the sad bread"></label>
+  <label class="field"><span>Priority</span><select id="ePri"><option value="0">Whenever</option><option value="1">Need it !</option><option value="2">REALLY need it !!!</option></select></label>
   <div class="row">
     <button class="btn danger" id="eDelete">Remove</button>
     <button class="btn primary" id="eSave">Save</button>
@@ -431,16 +469,36 @@ body.shake main { animation: shake .5s; }
   <h2>Settings</h2>
   <label class="field"><span>Your name</span><input id="sName" placeholder="Mook"></label>
   <label class="field"><span>Family code</span><input id="sCode" placeholder="The code everyone shares"></label>
-  <div class="row" style="margin-bottom:6px">
-    <button class="btn plain" id="sKeep">Pull from Keep now</button>
+  <div id="keepBlock">
+    <div class="row" style="margin-bottom:6px">
+      <button class="btn plain" id="sKeep">Pull from Keep now</button>
+    </div>
+    <div class="status" id="keepStatus"></div>
   </div>
-  <div class="status" id="keepStatus"></div>
+  <div class="row" style="margin-bottom:18px">
+    <button class="btn plain" id="sInvite">✊ Invite someone</button>
+  </div>
   <div class="order">
     <h2 style="font-size:17px;margin-bottom:4px" id="orderTitle">Aisle order</h2>
-    <p class="hint">Match the walk through your supermarket.</p>
+    <p class="hint">Grab the ☰ and drag to match the walk through the shop.</p>
+    <select id="orderShop" aria-label="Which shop's order"></select>
     <ul id="orderList"></ul>
   </div>
   <div class="row" style="margin-top:16px"><button class="btn primary" id="sDone">Done</button></div>
+</div>
+
+<div class="sheet" id="inviteSheet" role="dialog" aria-modal="true">
+  <div class="grab"></div>
+  <h2>Invite someone</h2>
+  <p class="hint" style="margin-top:0">Share <b>this</b> list (same items, everyone sees everything), or give them a list of their own.</p>
+  <button class="btn primary" id="iShare" style="width:100%;margin-bottom:18px">🔗 Share our list</button>
+  <label class="field"><span>Or start a separate list for</span><input id="iName" placeholder="e.g. Adam" maxlength="30"></label>
+  <button class="btn plain" id="iNew" style="width:100%">✊ Make them their own list</button>
+  <div id="iResult" hidden>
+    <p class="hint" style="margin:16px 0 6px">Their code (they can also just tap the link):</p>
+    <div class="codebox" id="iCode"></div>
+    <button class="btn primary" id="iSend" style="width:100%">📤 Send them the link</button>
+  </div>
 </div>
 
 <div class="sheet" id="shopSheet" role="dialog" aria-modal="true">
@@ -464,7 +522,11 @@ body.shake main { animation: shake .5s; }
 <div class="sheet" id="quickSheet" role="dialog" aria-modal="true">
   <div class="grab"></div>
   <div class="qhead"><h2 id="qName"></h2><span class="qty" id="qQty" hidden></span></div>
-  <div class="field" style="margin:12px 0 0"><span>Move to aisle</span></div>
+  <div class="field" style="margin:12px 0 0"><span>How badly do we need it?</span></div>
+  <div class="prirow" id="qPri">
+    <button data-pri="0">Whenever</button><button data-pri="1">Need it !</button><button data-pri="2">REALLY !!!</button>
+  </div>
+  <div class="field" style="margin:0"><span>Move to aisle</span></div>
   <div class="aisles" id="qAisles"></div>
   <div class="row">
     <button class="btn danger" id="qDelete">🗑️ Remove</button>
@@ -487,6 +549,9 @@ body.shake main { animation: shake .5s; }
   let me = LS.get('name', '');
   let code = LS.get('code', '');
   let state = LS.get('state', { items: {}, catalog: {}, order: SECTIONS.slice() });
+  // Invite links look like https://…/#join=CODE
+  const joinCode = (() => { const m = location.hash.match(/join=([\w-]+)/); return m ? decodeURIComponent(m[1]) : ''; })();
+  if (joinCode) history.replaceState(null, '', location.pathname);
   state.shops = state.shops || {};
   let curShop = null;                                 // id of the shop we're in, or null
   let shopOverride = LS.get('shopOverride', null);    // { id | 'none', until } when picked by hand
@@ -526,7 +591,8 @@ body.shake main { animation: shake .5s; }
     if (queue.length) return; // local changes still on their way, keep our view
     const before = new Set(Object.keys(state.items));
     state = { items: data.items || {}, catalog: data.catalog || {}, order: data.order || SECTIONS.slice(),
-      shops: data.shops || {}, bonus: data.bonus || null };
+      shops: data.shops || {}, household: data.household || { home: true } };
+    $('keepBlock').hidden = !state.household.home;
     if (curShop && !state.shops[curShop]) curShop = null;
     if (!curShop && Object.keys(state.shops).length && !lastFix) detectShop();
     renderShopBar();
@@ -551,6 +617,7 @@ body.shake main { animation: shake .5s; }
       while (queue.length) {
         last = await api('POST', queue[0]);
         queue.shift(); LS.set('queue', queue);
+        if (last.bonusHit && !celebrated.has(last.bonusHit)) { celebrated.add(last.bonusHit); celebrate(); }
       }
       flushing = false;
       if (last) takeServer(last);
@@ -594,9 +661,9 @@ body.shake main { animation: shake .5s; }
         const p = parseQty(op.name); if (!p.name) return;
         const k = key(p.name);
         const dupe = Object.values(state.items).find((i) => i.key === k && !i.checked);
-        if (dupe) { if (op.qty || p.qty) dupe.qty = op.qty || p.qty; return; }
+        if (dupe) { if (op.qty || p.qty) dupe.qty = op.qty || p.qty; if ((p.pri || 0) > (dupe.pri || 0)) dupe.pri = p.pri; return; }
         const learned = state.catalog[k];
-        state.items[op.id] = { id: op.id, name: learned ? learned.name : p.name, key: k, qty: op.qty || p.qty || '', note: op.note || '',
+        state.items[op.id] = { id: op.id, name: learned ? learned.name : p.name, key: k, qty: op.qty || p.qty || '', note: op.note || '', pri: p.pri || 0,
           section: guessSection(p.name, state.catalog), by: me, at: Date.now(), checked: false };
         freshIds.add(op.id);
         break;
@@ -721,11 +788,11 @@ body.shake main { animation: shake .5s; }
   function itemRow(i) {
     const fresh = freshIds.has(i.id) ? ' fresh' : '';
     const by = i.by === 'Voice' ? '🗣️' : initial(i.by);
-    const bonus = i.id === state.bonus && !i.checked;
-    return `<div class="item${i.checked ? ' checked' : ''}${fresh}${bonus ? ' bonus' : ''}" data-id="${i.id}">
+    const pri = i.pri || 0;
+    return `<div class="item${i.checked ? ' checked' : ''}${fresh}${pri ? ' pri' + pri : ''}" data-id="${i.id}">
       <button class="check" data-act="check" aria-label="Tick ${esc(i.name)}"><span class="box"></span></button>
       <button class="body" data-act="menu">
-        <span class="name"><span>${esc(i.name)}</span>${i.qty ? `<span class="qty">${esc(i.qty)}</span>` : ''}${bonus ? '<span class="bonus-tag">💀 Bonus</span>' : ''}</span>
+        <span class="name"><span>${esc(i.name)}</span>${i.qty ? `<span class="qty">${esc(i.qty)}</span>` : ''}${pri === 2 ? '<span class="pri-stamp">!!!</span>' : pri === 1 ? '<span class="pri-stamp p1">!</span>' : ''}</span>
         ${i.note ? `<span class="note">${esc(i.note)}</span>` : ''}
       </button>
       ${by && by !== initial(me) ? `<span class="by" title="Added by ${esc(i.by)}">${esc(by)}</span>` : ''}
@@ -771,7 +838,7 @@ body.shake main { animation: shake .5s; }
     let h = '';
     for (const sec of [...order, ...Object.keys(bySec).filter((s) => !order.includes(s))]) {
       const list = bySec[sec]; if (!list) continue;
-      list.sort((a, b) => a.name.localeCompare(b.name));
+      list.sort((a, b) => (b.pri || 0) - (a.pri || 0) || a.name.localeCompare(b.name));
       h += `<div class="section" data-sec="${esc(sec)}"><div class="section-head">${EMOJI[sec] || '🛒'} ${esc(sec)} <span class="n">${list.length}</span></div>${list.map(itemRow).join('')}</div>`;
     }
     if (!todo.length && !done.length) {
@@ -785,6 +852,9 @@ body.shake main { animation: shake .5s; }
     }
     $('list').innerHTML = h;
     freshIds.clear();
+    const must = todo.filter((i) => i.pri === 2).sort((a, b) => a.name.localeCompare(b.name));
+    $('mustGet').hidden = !must.length;
+    $('mustGet').innerHTML = must.length ? `<b>🔥 Really need:</b><span>${must.map((i) => esc(i.name)).join(' · ')}</span>` : '';
   }
 
   // Hold the name: pick it up and drag it to another aisle.
@@ -871,6 +941,7 @@ body.shake main { animation: shake .5s; }
     editing = it.id;
     $('qName').textContent = it.name;
     $('qQty').hidden = !it.qty; $('qQty').textContent = it.qty || '';
+    $('qPri').querySelectorAll('button').forEach((b) => b.classList.toggle('on', +b.dataset.pri === (it.pri || 0)));
     $('qAisles').innerHTML = SECTIONS.map((s) =>
       `<button data-aisle="${esc(s)}" class="${s === sectionOf(it) ? 'on' : ''}">${EMOJI[s] || ''} ${esc(s)}</button>`).join('');
     openSheet('quickSheet');
@@ -880,6 +951,14 @@ body.shake main { animation: shake .5s; }
     if (!b || !it) return closeSheets();
     if (b.dataset.aisle !== sectionOf(it)) moveTo(it, b.dataset.aisle);
     closeSheets();
+  });
+  $('qPri').addEventListener('click', (e) => {
+    const b = e.target.closest('[data-pri]'); const it = state.items[editing];
+    if (!b || !it) return;
+    const pri = +b.dataset.pri;
+    if (pri !== (it.pri || 0)) send({ op: 'update', id: it.id, fields: { pri } });
+    $('qPri').querySelectorAll('button').forEach((x) => x.classList.toggle('on', x === b));
+    setTimeout(closeSheets, 220);
   });
   $('qDelete').addEventListener('click', () => removeItem(state.items[editing]));
   $('qEdit').addEventListener('click', () => {
@@ -910,9 +989,7 @@ body.shake main { animation: shake .5s; }
     const row = btn.closest('.item'); const it = state.items[row.dataset.id]; if (!it) return;
     if (btn.dataset.act === 'check') {
       if (navigator.vibrate) navigator.vibrate(8);
-      const bonusHit = !it.checked && it.id === state.bonus && !celebrated.has(it.id);
       send({ op: 'check', id: it.id, checked: !it.checked });
-      if (bonusHit) { celebrated.add(it.id); celebrate(); }
     } else if (!it.checked) openQuick(it);
   });
   $('list').addEventListener('click', (e) => {
@@ -930,6 +1007,7 @@ body.shake main { animation: shake .5s; }
   function openEdit(it) {
     editing = it.id;
     $('eName').value = it.name; $('eQty').value = it.qty || ''; $('eNote').value = it.note || ''; $('eSection').value = sectionOf(it);
+    $('ePri').value = String(it.pri || 0);
     openSheet('editSheet');
   }
   $('eSave').addEventListener('click', () => {
@@ -939,6 +1017,7 @@ body.shake main { animation: shake .5s; }
     if (name && name !== it.name) fields.name = name;
     if ($('eQty').value.trim() !== (it.qty || '')) fields.qty = $('eQty').value.trim();
     if ($('eNote').value.trim() !== (it.note || '')) fields.note = $('eNote').value.trim();
+    if (+$('ePri').value !== (it.pri || 0)) fields.pri = +$('ePri').value;
     const newSec = $('eSection').value !== sectionOf(it) ? $('eSection').value : null;
     if (Object.keys(fields).length) send({ op: 'update', id: it.id, fields });
     if (newSec) moveTo(it, newSec);
@@ -947,23 +1026,64 @@ body.shake main { animation: shake .5s; }
   $('eDelete').addEventListener('click', () => removeItem(state.items[editing]));
 
   // Settings
+  // Aisle order: pick a shop (or the default), then drag rows by the handle
+  let orderShop = null;
+  const orderOf = (sid) => {
+    const sh = sid && state.shops[sid];
+    return (sh && sh.order && sh.order.length ? sh.order : (state.order && state.order.length ? state.order : SECTIONS)).slice();
+  };
   function renderOrder() {
-    const order = orderFor().slice();
-    $('orderTitle').textContent = curShop ? `Aisle order at ${shopName(curShop)}` : 'Aisle order';
-    $('orderList').innerHTML = order.map((s, i) => `<li><span class="lbl">${EMOJI[s] || ''} ${esc(s)}</span>
-      <button data-mv="-1" data-i="${i}" ${i === 0 ? 'disabled' : ''} aria-label="Move up">↑</button>
-      <button data-mv="1" data-i="${i}" ${i === order.length - 1 ? 'disabled' : ''} aria-label="Move down">↓</button></li>`).join('');
+    const shops = Object.values(state.shops).sort((a, b) => a.name.localeCompare(b.name));
+    if (orderShop && !state.shops[orderShop]) orderShop = null;
+    $('orderShop').hidden = !shops.length;
+    $('orderShop').innerHTML = `<option value="">Everywhere else (default)</option>` +
+      shops.map((sh) => `<option value="${esc(sh.id)}" ${sh.id === orderShop ? 'selected' : ''}>📍 ${esc(sh.name)}</option>`).join('');
+    $('orderTitle').textContent = orderShop ? `Aisle order at ${shopName(orderShop)}` : 'Aisle order';
+    $('orderList').innerHTML = orderOf(orderShop).map((s) =>
+      `<li data-sec="${esc(s)}"><span class="lbl">${EMOJI[s] || ''} ${esc(s)}</span><span class="handle" aria-label="Drag to reorder">☰</span></li>`).join('');
   }
-  $('orderList').addEventListener('click', (e) => {
-    const b = e.target.closest('[data-mv]'); if (!b) return;
-    const order = orderFor().slice();
-    const i = +b.dataset.i, j = i + +b.dataset.mv;
-    [order[i], order[j]] = [order[j], order[i]];
-    send({ op: 'order', order, shop: curShop || undefined }); renderOrder();
+  $('orderShop').addEventListener('change', () => { orderShop = $('orderShop').value || null; renderOrder(); });
+
+  let rowDrag = null;
+  $('orderList').addEventListener('pointerdown', (e) => {
+    const h = e.target.closest('.handle'); if (!h) return;
+    e.preventDefault();
+    const li = h.closest('li');
+    h.setPointerCapture(e.pointerId);
+    li.classList.add('dragging');
+    rowDrag = { li, handle: h, y: e.clientY };
+    if (navigator.vibrate) navigator.vibrate(10);
   });
+  $('orderList').addEventListener('pointermove', (e) => {
+    if (!rowDrag) return;
+    const { li } = rowDrag;
+    // keep swapping with neighbours until the row sits under the finger
+    for (let guard = 0; guard < 20; guard++) {
+      const prev = li.previousElementSibling, next = li.nextElementSibling;
+      if (prev && e.clientY < prev.getBoundingClientRect().top + prev.offsetHeight / 2) prev.before(li);
+      else if (next && e.clientY > next.getBoundingClientRect().top + next.offsetHeight / 2) next.after(li);
+      else break;
+    }
+    // keep the dragged row in view inside the sheet
+    const sheet = $('setSheet'), sr = sheet.getBoundingClientRect();
+    if (e.clientY < sr.top + 60) sheet.scrollTop -= 12; else if (e.clientY > sr.bottom - 60) sheet.scrollTop += 12;
+  });
+  const endRowDrag = () => {
+    if (!rowDrag) return;
+    rowDrag.li.classList.remove('dragging');
+    rowDrag = null;
+    const order = [...$('orderList').children].map((li) => li.dataset.sec);
+    if (order.join('|') !== orderOf(orderShop).join('|')) {
+      send({ op: 'order', order, shop: orderShop || undefined });
+      toast(orderShop ? `Aisle order saved for ${shopName(orderShop)}` : 'Default aisle order saved');
+    }
+  };
+  $('orderList').addEventListener('pointerup', endRowDrag);
+  $('orderList').addEventListener('pointercancel', endRowDrag);
+
   $('settingsBtn').addEventListener('click', () => {
     $('sName').value = me; $('sCode').value = code; $('keepStatus').textContent = '';
-    renderOrder(); openSheet('setSheet');
+    orderShop = curShop; renderOrder(); openSheet('setSheet');
   });
   $('sKeep').addEventListener('click', () => pullKeep(true));
   $('sDone').addEventListener('click', () => {
@@ -974,6 +1094,38 @@ body.shake main { animation: shake .5s; }
     closeSheets(); render();
     if (codeChanged) { queue = []; LS.set('queue', queue); refresh(); }
   });
+
+  // Invite
+  const inviteLink = (c) => `${location.origin}/#join=${encodeURIComponent(c)}`;
+  async function shareLink(c, who) {
+    const url = inviteLink(c);
+    const text = who ? `${who}, here's your own Shopping Fist list ✊ Code: ${c}` : `Join our Shopping Fist list ✊ Code: ${c}`;
+    try {
+      if (navigator.share) { await navigator.share({ title: 'Shopping Fist', text, url }); return; }
+    } catch (e) { if (e && e.name === 'AbortError') return; }
+    try { await navigator.clipboard.writeText(`${text}\n${url}`); toast('Link copied. Paste it in a message.'); }
+    catch { prompt('Copy this link:', url); }
+  }
+  $('sInvite').addEventListener('click', () => {
+    closeSheets();
+    $('iResult').hidden = true; $('iName').value = '';
+    setTimeout(() => openSheet('inviteSheet'), 180);
+  });
+  $('iShare').addEventListener('click', () => shareLink(code));
+  let newList = null;
+  $('iNew').addEventListener('click', async () => {
+    const name = $('iName').value.trim();
+    if (!name) { $('iName').focus(); $('iName').placeholder = 'Whose list is it?'; return; }
+    $('iNew').textContent = 'Making it…';
+    try {
+      const out = await api('POST', { op: 'household_new', name });
+      newList = out.newHousehold;
+      $('iCode').textContent = newList.code;
+      $('iResult').hidden = false;
+    } catch { toast("Couldn't make the list. Are you online?"); }
+    $('iNew').textContent = '✊ Make them their own list';
+  });
+  $('iSend').addEventListener('click', () => newList && shareLink(newList.code, newList.name));
 
   // Welcome
   function askWelcome(wrongCode) {
@@ -1177,6 +1329,14 @@ body.shake main { animation: shake .5s; }
   $('tagline').textContent = TAGLINES[Math.floor(Math.random() * TAGLINES.length)];
 
   render(); renderShopBar();
+  if (joinCode && joinCode !== code) {
+    if (!code || confirm(`Switch to the list for code "${joinCode}"? Your current list stays where it is.`)) {
+      code = joinCode; LS.set('code', code);
+      queue = []; LS.set('queue', queue);
+      state = { items: {}, catalog: {}, order: SECTIONS.slice(), shops: {} }; LS.set('state', state);
+      render();
+    }
+  }
   if (!me || !code) askWelcome(false);
   else { refresh(); pullKeep(); detectShop(); }
 

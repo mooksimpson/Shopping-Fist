@@ -19,6 +19,8 @@ function run([c, ...a]) {
     case 'DEL': { const had = db.delete(a[0]); return had ? 1 : 0; }
     case 'HSET': h(a[0]).set(a[1], a[2]); return 1;
     case 'HDEL': return h(a[0]).delete(a[1]) ? 1 : 0;
+    case 'HGET': return h(a[0]).has(a[1]) ? h(a[0]).get(a[1]) : null;
+    case 'HEXISTS': return h(a[0]).has(a[1]) ? 1 : 0;
     case 'HGETALL': return [...h(a[0])].flat();
     case 'RPUSH': { const l = db.get(a[0]) || []; l.push(...a.slice(1)); db.set(a[0], l); return l.length; }
     case 'LRANGE': return (db.get(a[0]) || []).slice();

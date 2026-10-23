@@ -96,12 +96,15 @@
   }
 
   // "2 milk", "milk x2", "3x eggs" -> { name, qty }
+  // "milk!" = need it, "milk!!" or "!!milk" = REALLY need it
   function parseQty(s) {
-    let t = String(s || '').trim(), qty = '';
+    let t = String(s || '').trim(), qty = '', pri = 0;
+    const bangs = (t.match(/^!+|!+$/g) || []).join('').length;
+    if (bangs) { pri = Math.min(2, bangs); t = t.replace(/^!+\s*|\s*!+$/g, ''); }
     let m = t.match(/^(\d+)\s*(x\s+)?(.+)$/i);
     if (m && !/^\d+\s*(g|kg|ml|l|pk|pack)\b/i.test(t)) { qty = m[1]; t = m[3]; }
     else if ((m = t.match(/^(.+?)\s+x\s*(\d+)$/i))) { t = m[1]; qty = m[2]; }
-    return { name: tidyName(t), qty };
+    return { name: tidyName(t), qty, pri };
   }
 
   const api = { SECTIONS, EMOJI, STARTERS, STARTER_INDEX, guessSection, tidyName, parseQty, key, norm };
