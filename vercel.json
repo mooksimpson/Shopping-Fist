@@ -8,6 +8,9 @@
     "api/keep_sync.py": {
       "maxDuration": 30
     },
+    "api/keep_pull.py": {
+      "maxDuration": 30
+    },
     "api/list.js": {
       "maxDuration": 15,
       "includeFiles": "public/catalog.js"

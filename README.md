@@ -10,6 +10,7 @@ to "Hey Google" via your Keep list.
 - `public/catalog.js` aisles, starter items and the aisle-guessing rules. Edit freely.
 - `api/list.js` the shared list (stored in Upstash Redis)
 - `api/keep_sync.py` the Keep inbox: moves items from your Keep "shopping list" into the app
+- `api/keep_pull.py` Keep bridge for Fo-odyssey: reads (then, once told, clears) the Keep "food list". Off unless `KEEP_BRIDGE_CODE` is set; `KEEP_BRIDGE_LISTS` limits which lists it may touch
 - `get_token.py` one-off script to get the Google token for the Keep inbox
 - `dev/server.js` local test server with a fake database (`node dev/server.js`, code `test`)
 
